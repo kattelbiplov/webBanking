@@ -3,10 +3,13 @@ const Transaction = require('../models/transactionModel');
 const User = require('../models/userModel');
 const authMiddleware = require('../middlewares/authMiddleware');
 const userModel = require('../models/userModel');
+const sendmail = require('sendmail')();
+//const nodemailer = require('nodemailer');
 
 router.post('/send-money', authMiddleware, async (req, res) => {
     console.log('Received request:', req.body);
     try {
+        
         // Input validation
         if (!req.body.receiver || !req.body.amount || req.body.amount <= 0) {
             return res.status(400).send({
@@ -44,7 +47,42 @@ router.post('/send-money', authMiddleware, async (req, res) => {
             // Increase the receiver's balance
             receiver.balance += req.body.amount;
             await receiver.save();
+            sendmail({
+                from: 'biplovkattel@gmail.com',
+                to: receiver.email, // Assuming receiver has an email property
+                subject: 'Money Received',
+                text: `You have received ${req.body.amount} from ${sender.username}.`
+            }, function (err, reply) {
+                if (err) {
+                    console.error('Email sending failed:', err);
+                } else {
+                    console.log('Email sent:', reply);
+                }
+            });
+            //nodemailer transporter
+       /* const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: `${sender.email}`,
+                pass: `${sender.password}`
+            }
+        });
+// Send email notification to the receiver
+const mailOptions = {
+    from: 'biplovkattel@gmail.com',
+    to: receiver.email, // Assuming receiver has an email property
+    subject: 'Money Received',
+    text: `You have received ${req.body.amount} from ${sender.username}.`
+};
 
+transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+        console.error('Email sending failed:', error);
+    } else {
+        console.log('Email sent:', info.response);
+    }
+});
+*/
             res.status(200).send({
                 message: 'Transaction successful',
                 data: newTransaction,
